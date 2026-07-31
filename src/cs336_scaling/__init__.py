@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from cs336_scaling.api import ScalingApiClient, ScalingApiError, load_runs, merge_runs, save_runs
 from cs336_scaling.api_fit import ApiIsoFlopsOptimum, LossFit, fit_loss_scaling, fit_model_size_scaling, select_best_by_compute
-from cs336_scaling.isoflops import IsoFlopsOptimum, PowerLawFit, fit_isoflops_scaling_laws, fit_power_law, load_isoflops_runs, select_isoflops_optima
+from cs336_scaling.isoflops import IsoFlopsOptimum, PowerLawFit, fit_isoflops_scaling_laws, fit_power_law, load_isoflops_runs, make_summary, select_isoflops_optima
 from cs336_scaling.local_api import LocalTrainingApi
 from cs336_scaling.scaling_config import (
     ALLOWED_TRAIN_FLOPS,
