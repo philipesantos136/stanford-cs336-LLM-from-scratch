@@ -329,10 +329,10 @@ Os componentes construídos neste primeiro assignment não são protótipos isol
 
 ```mermaid
 graph LR
-    A["Assignment 1: Fundamentos<br/>(BPE, TransformerLM, AdamW)"] --> B["Assignment 2: Desempenho & CUDA<br/>(FlashAttention, Triton, Fast RMSNorm)"]
-    A --> C["Assignment 3: Treinamento Distribuído<br/>(DDP, ZeRO-1/2/3, Tensor Parallelism)"]
-    A --> D["Assignment 4: Inferência & Servimento<br/>(KV Cache, GQA, PagedAttention)"]
-    A --> E["Assignment 5: Alignment & Fine-tuning<br/>(SFT, LoRA, DPO/PPO)"]
+    A["Assignment 1: Fundamentos<br/>• BPE Tokenizer<br/>• TransformerLM<br/>• Loss & AdamW"] --> B["Assignment 2: Desempenho<br/>• FlashAttention<br/>• Triton Kernels<br/>• Fast RMSNorm"]
+    A --> C["Assignment 3: Distribuído<br/>• DDP & ZeRO-1/2/3<br/>• Tensor Parallelism"]
+    A --> D["Assignment 4: Inferência<br/>• KV Cache & GQA<br/>• PagedAttention"]
+    A --> E["Assignment 5: Alignment<br/>• SFT & LoRA<br/>• DPO / PPO"]
 ```
 
 #### 1. Tokenização BPE (`BPETokenizer`)
