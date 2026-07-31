@@ -6,6 +6,7 @@ class TestRepositoryStructure(unittest.TestCase):
         self.assertTrue(os.path.exists("README.md"))
         self.assertTrue(os.path.exists(".gitignore"))
         self.assertTrue(os.path.exists("docs/adr/0001-repository-initialization.md"))
+        self.assertTrue(os.path.exists("docs/adr/0002-vibe-coding-methodology.md"))
 
 if __name__ == "__main__":
     unittest.main()

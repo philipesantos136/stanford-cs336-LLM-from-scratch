@@ -1,14 +1,19 @@
 # Stanford CS336: Language Modeling from Scratch (`stanford-cs336-LLM-from-scratch`)
 
-Repositório para implementação e estudos baseados no curso Stanford CS336 (Language Modeling from Scratch).
+Repositório voltado para a **compreensão aprofundada dos conceitos fundamentais** necessários para a **implementação completa do treinamento de LLMs (Large Language Models) no futuro**, baseado no curso Stanford CS336.
 
-## Estrutura do Projeto
+## 🎯 Objetivo e Metodologia
+
+- **Propósito:** Consolidar uma base teórica e prática sólida para construir e treinar modelos de linguagem do zero.
+- **Abordagem (*Vibe Coding* + Explicações Detalhadas):** As tarefas são desenvolvidas utilizando técnicas de *vibe coding* (desenvolvimento assistido por IA), mas com **explicações conceituais detalhadas** para garantir a total compreensão, fundamentação e replicabilidade dos conceitos em diversos contextos.
+
+## 📁 Estrutura do Projeto
 
 - `src/`: Código fonte dos modelos, tokenizadores e pipelines de treinamento.
 - `tests/`: Scripts e suítes de testes unitários e de integração.
-- `docs/`: Documentação técnica e registros de decisões de arquitetura (ADRs).
+- `docs/`: Documentação técnica e registros de decisões de arquitetura ([ADRs](file:///d:/Projetos/Stanford-CS336/docs/adr/)).
 
-## Como Começar
+## 🚀 Como Começar
 
 1. Clone este repositório:
    ```bash
@@ -22,4 +27,5 @@ Repositório para implementação e estudos baseados no curso Stanford CS336 (La
    ```cmd
    .venv\Scripts\activate
    ```
+
 
