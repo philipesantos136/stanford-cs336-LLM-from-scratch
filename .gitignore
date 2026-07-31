@@ -33,3 +33,6 @@ ENV/
 # Project Specific
 tmp/
 *.log
+
+# Rules & Assistant Configuration (Do Not Commit)
+GEMINI.md
