@@ -11,7 +11,10 @@ O **Byte-Pair Encoding (BPE)** é o algoritmo de tokenização utilizado pelos m
 
 - **Vocabulário Base:** Inicializado com 256 tokens representando todos os bytes possíveis (`0x00` a `0xFF`) mais os tokens especiais (ex: `<|endoftext|>`).
 - **Pré-tokenização (Regex GPT-2):** O texto é dividido em pedaços lógicos de pontuação, espaços e palavras antes do BPE usando a expressão regular:
-  $$\text{regex} = \text{r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""}$$
+  ```python
+  GPT2_SPLIT_REGEX = r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+  ```
+
   Isso garante que fusões de tokens nunca ultrapassem limites morfológicos importantes (por exemplo, um espaço no início de uma palavra não é mesclado com a palavra anterior).
 - **Algoritmo de Fusão:** Iterativamente, contam-se os pares adjacentes de bytes mais frequentes no corpus e os fusora criando um novo token até atingir o tamanho de vocabulário desejado $V$.
 
