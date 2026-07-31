@@ -25,3 +25,10 @@
 
 5. **Push Automático:**
    - Após a realização de commits, deve ser efetuado o `git push` imediatamente para sincronizar com o repositório remoto.
+
+## Consulta e Integração de Repositórios de Assignments
+
+1. **Consulta aos Repositórios Oficiais dos Assignments:**
+   - Para cada assignment trabalhado neste projeto, deve-se consultar o repositório correspondente no GitHub do Stanford CS336.
+   - Caso o repositório do assignment não seja encontrado automaticamente, solicitar expressamente ao usuário que forneça a URL ou o conteúdo do repositório.
+   - Analisar detalhadamente o repositório de referência para determinar requisitos, estruturas de pastas, dados, testes e componentes que devem ser integrados ou implementados no nosso código.
