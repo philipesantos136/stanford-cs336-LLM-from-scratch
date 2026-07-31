@@ -218,6 +218,12 @@ print("Texto Decodificado:", decoded_text)
 assert decoded_text == input_text
 ```
 
+**Saída no Terminal:**
+```text
+Token IDs gerados: [280, 282, 286, 32, 289]
+Texto Decodificado: The quick fox <|endoftext|>
+```
+
 ---
 
 ### 3.2 Exemplo: Criando e Executando o Modelo TransformerLM
@@ -250,7 +256,12 @@ input_ids = torch.randint(0, vocab_size, (2, 16))
 
 # 4. Forward pass
 logits = model(input_ids)
-print("Formato da saída dos Logits:", logits.shape)  # Output: torch.Size([2, 16, 10000])
+print("Formato da saída dos Logits:", logits.shape)
+```
+
+**Saída no Terminal:**
+```text
+Formato da saída dos Logits: torch.Size([2, 16, 10000])
 ```
 
 ---
@@ -289,6 +300,11 @@ optimizer.step()
 scheduler.step(current_step=1)
 
 print(f"Perda no Passo 1: {loss.item():.4f} | Norma dos Gradientes: {grad_norm:.4f}")
+```
+
+**Saída no Terminal:**
+```text
+Perda no Passo 1: 235.7733 | Norma dos Gradientes: 70.4475
 ```
 
 ---
