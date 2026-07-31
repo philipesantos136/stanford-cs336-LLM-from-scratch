@@ -59,9 +59,9 @@ flowchart TD
 ### Intuição da Similaridade de Jaccard
 Para dois documentos $A$ e $B$ representados pelos seus conjuntos de $k$-shingles (sub-sequências de $k$ palavras) $S_A$ e $S_B$:
 
-\[
+$$
 J(S_A, S_B) = \frac{|S_A \cap S_B|}{|S_A \cup S_B|}
-\]
+$$
 
 Comparações diretas de conjuntos de shingles para bilhões de documentos exigem tempo $\mathcal{O}(N^2)$, o que é computacionalmente inviável.
 
@@ -69,17 +69,17 @@ Comparações diretas de conjuntos de shingles para bilhões de documentos exige
 Utilizamos $K$ funções de hash permutadas independentes $h_i(x) = (a_i \cdot x + b_i) \pmod p$.
 Para cada função de hash $h_i$, a probabilidade de que os dois valores mínimos colidam é exatamente igual à Similaridade de Jaccard:
 
-\[
+$$
 \mathbb{P}\left(\min_{s \in S_A} h_i(s) = \min_{s \in S_B} h_i(s)\right) = J(S_A, S_B)
-\]
+$$
 
 ### LSH (Locality-Sensitive Hashing) por Bandas
 Dividimos a assinatura de MinHash de tamanho $K$ em $B$ bandas contendo $R$ linhas cada ($K = B \times R$).
 A probabilidade de dois documentos compartilharem pelo menos um balde LSH é:
 
-\[
+$$
 P_{\text{colisão}} = 1 - (1 - s^R)^B
-\]
+$$
 
 onde $s = J(S_A, S_B)$ é a similaridade real de Jaccard.
 
