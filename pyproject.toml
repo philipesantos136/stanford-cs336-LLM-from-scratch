@@ -15,7 +15,8 @@ dependencies = [
     "torch",
     "numpy",
     "regex",
-    "tqdm"
+    "tqdm",
+    "beautifulsoup4"
 ]
 
 [project.optional-dependencies]
