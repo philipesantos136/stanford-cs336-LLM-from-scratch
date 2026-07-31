@@ -318,3 +318,38 @@ A implementação foi completamente validada através da suíte oficial de teste
 ```
 
 Todos os **52 testes executáveis** (cobrindo BPE, RoPE, RMSNorm, SwiGLU, CausalAttention, TransformerLM, Cross-Entropy, AdamW, Cosine Schedule, Checkpointing e Data Loading) passaram com **100% de sucesso**.
+
+---
+
+## 🚀 5. Aplicação Futura: Como Usaremos Esses Conceitos nos Próximos Assignments e na Engenharia de LLMs
+
+Os componentes construídos neste primeiro assignment não são protótipos isolados; eles formam o **núcleo fundacional** que será expandido, paralelizado e otimizado ao longo de todo o curso **Stanford CS336** e no desenvolvimento de LLMs modernos em escala industrial.
+
+### 🗺️ Mapeamento de Reuso e Evolução Arquitetural
+
+```mermaid
+graph LR
+    A["Assignment 1: Fundamentos<br/>(BPE, TransformerLM, AdamW)"] --> B["Assignment 2: Desempenho & CUDA<br/>(FlashAttention, Triton, Fast RMSNorm)"]
+    A --> C["Assignment 3: Treinamento Distribuído<br/>(DDP, ZeRO-1/2/3, Tensor Parallelism)"]
+    A --> D["Assignment 4: Inferência & Servimento<br/>(KV Cache, GQA, PagedAttention)"]
+    A --> E["Assignment 5: Alignment & Fine-tuning<br/>(SFT, LoRA, DPO/PPO)"]
+```
+
+#### 1. Tokenização BPE (`BPETokenizer`)
+- **Nos Próximos Assignments:** Será a ferramenta responsável por pré-processar e tokenizar os grandes conjuntos de dados reais (como FineWeb, OpenWebText ou SlimPajama) em arquivos binários compactos (`.bin` / `.npy`) para leitura ultra-rápida via `memmap`.
+- **Na Prática de LLMs:** É a porta de entrada e saída para qualquer pipeline de servimento (vLLM, Ollama, TensorRT-LLM), onde o texto do usuário é convertido em IDs e a resposta do modelo é decodificada em tempo real para o usuário.
+
+#### 2. Rotary Position Embedding (RoPE) & SwiGLU (`model.py`)
+- **Nos Próximos Assignments (Aceleração & Kernels Customizados):** Nos assignments de otimização e kernels GPU (CUDA / Triton), escreveremos fusões de kernels onde o **RoPE** é aplicado diretamente dentro da GPU durante a multiplicação da atenção, evitando cópias lentas de memória global.
+- **Na Inferência com KV-Cache:** Como o RoPE opera por rotação geométrica dependente apenas da posição $m$, ele permite manter e reutilizar chaves ($K$) e valores ($V$) já calculados de tokens anteriores (**KV-Cache**) sem precisar recalcular as posições passadas a cada novo token gerado.
+
+#### 3. Multi-Head Causal Attention (`model.py`)
+- **Evolução para GQA (Grouped-Query Attention):** A estrutura de atenção desenvolvida aqui será evoluída para **GQA** (usado no LLaMA 3 e Mistral), onde múltiplas cabeças de Query compartilham uma única cabeça de Key/Value, reduzindo drasticamente o consumo de memória VRAM durante a geração de texto.
+
+#### 4. Loss de Entropia Cruzada & Log-Sum-Exp (`loss.py`)
+- **Treinamento Distribuído (Parallel Cross-Entropy):** Em clusters com dezenas de GPUs (Megatron-LM), o vocabulário de logits é divido entre GPUs (**Tensor Parallelism**). A fórmula estável com Log-Sum-Exp desenvolvida aqui será adaptada para rodar de forma distribuída usando primitivas de comunicação `All-Reduce` (máximo global e soma global).
+- **Alinhamento de Modelos (DPO / PPO):** A função de perda servirá de referência para calcular a probabilidade dos tokens em algoritmos de alinhamento de preferências humanas (Direct Preference Optimization).
+
+#### 5. Otimizador AdamW, Schedule Cosseno & Clipping (`optimizer.py`)
+- **Shard de Estados do Otimizador (ZeRO / FSDP):** O AdamW mantém 8 bytes extras por parâmetro em ponto flutuante ($m_t$ e $v_t$). Nos assignments de treinamento distribuído em larga escala, utilizaremos algoritmos ZeRO (Zero Redundancy Optimizer) para fragmentar (*shard*) o estado deste otimizador AdamW entre múltiplas GPUs, permitindo treinar modelos de bilhões de parâmetros sem estourar a VRAM.
+
