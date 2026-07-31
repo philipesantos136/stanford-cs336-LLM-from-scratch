@@ -1,91 +1,202 @@
-"""
-Unit tests for Transformer Model components (Stanford CS336 Assignment 1).
-"""
-
-import pytest
+import numpy
 import torch
+import torch.nn.functional as F
+from einops import rearrange
 
-from cs336_basics.model import (
-    RMSNorm,
-    SwiGLU,
-    RotaryPositionalEmbedding,
-    CausalSelfAttention,
-    TransformerBlock,
-    TransformerLM,
+from .adapters import (
+    run_embedding,
+    run_linear,
+    run_multihead_self_attention,
+    run_multihead_self_attention_with_rope,
+    run_rmsnorm,
+    run_rope,
+    run_scaled_dot_product_attention,
+    run_silu,
+    run_swiglu,
+    run_transformer_block,
+    run_transformer_lm,
 )
 
 
-def test_rmsnorm_shape_and_value():
-    batch, seq_len, d_model = 2, 8, 64
-    x = torch.randn(batch, seq_len, d_model)
-    norm = RMSNorm(d_model)
-    out = norm(x)
-
-    assert out.shape == x.shape
-    # Check RMS of normalized tensor before gain weight scaling (weight is ones initially)
-    rms = torch.sqrt(out.pow(2).mean(-1) + 1e-5)
-    assert torch.allclose(rms, torch.ones_like(rms), atol=1e-3)
-
-
-def test_swiglu_shape():
-    batch, seq_len, d_model, d_ff = 2, 8, 64, 256
-    x = torch.randn(batch, seq_len, d_model)
-    ffn = SwiGLU(d_model, d_ff)
-    out = ffn(x)
-    assert out.shape == (batch, seq_len, d_model)
+def test_linear(numpy_snapshot, ts_state_dict, in_embeddings, d_model, d_ff):
+    w1_weight = ts_state_dict[0]["layers.0.ffn.w1.weight"]
+    output = run_linear(
+        d_in=d_model,
+        d_out=d_ff,
+        weights=w1_weight,
+        in_features=in_embeddings,
+    )
+    numpy_snapshot.assert_match(output)
 
 
-def test_rope_shape_and_rotation():
-    batch, num_heads, seq_len, head_dim = 2, 4, 16, 32
-    x = torch.randn(batch, num_heads, seq_len, head_dim)
-    rope = RotaryPositionalEmbedding(d_key=head_dim, max_seq_len=64)
-    out = rope(x, seq_len)
-
-    assert out.shape == x.shape
-    # Vector magnitude across head_dim should be preserved under rotation
-    norm_x = torch.norm(x, dim=-1)
-    norm_out = torch.norm(out, dim=-1)
-    assert torch.allclose(norm_x, norm_out, atol=1e-4)
-
-
-def test_causal_self_attention_masking():
-    batch, seq_len, d_model, num_heads = 1, 4, 32, 2
-    x = torch.randn(batch, seq_len, d_model, requires_grad=True)
-    attn = CausalSelfAttention(d_model=d_model, num_heads=num_heads, max_seq_len=16)
-
-    out = attn(x)
-    assert out.shape == (batch, seq_len, d_model)
-
-    # Check causal property: output at position 1 should NOT depend on input at position 2 or 3
-    loss = out[0, 1].sum()
-    loss.backward()
-
-    # Gradient with respect to x[0, 2] and x[0, 3] should be 0
-    assert torch.allclose(x.grad[0, 2], torch.zeros_like(x.grad[0, 2]), atol=1e-7)
-    assert torch.allclose(x.grad[0, 3], torch.zeros_like(x.grad[0, 3]), atol=1e-7)
-
-
-def test_transformer_lm_forward_pass():
-    vocab_size = 100
-    d_model = 64
-    num_layers = 2
-    num_heads = 4
-    d_ff = 128
-    batch_size = 2
-    seq_len = 16
-
-    model = TransformerLM(
+def test_embedding(numpy_snapshot, ts_state_dict, in_indices, vocab_size, d_model):
+    embedding_weight = ts_state_dict[0]["token_embeddings.weight"]
+    output = run_embedding(
         vocab_size=vocab_size,
         d_model=d_model,
-        num_layers=num_layers,
-        num_heads=num_heads,
+        weights=embedding_weight,
+        token_ids=in_indices,
+    )
+    numpy_snapshot.assert_match(output)
+
+
+def test_swiglu(numpy_snapshot, ts_state_dict, in_embeddings, d_model, d_ff):
+    w1_weight, w2_weight, w3_weight = [ts_state_dict[0][f"layers.0.ffn.{k}.weight"] for k in ["w1", "w2", "w3"]]
+
+    actual_output = run_swiglu(
+        d_model=d_model,
         d_ff=d_ff,
-        max_seq_len=64,
-        tie_weights=True,
+        w1_weight=w1_weight,
+        w2_weight=w2_weight,
+        w3_weight=w3_weight,
+        in_features=in_embeddings,
+    )
+    numpy_snapshot.assert_match(actual_output, atol=1e-5)
+
+
+def test_scaled_dot_product_attention(numpy_snapshot, q, k, v, mask):
+    actual_output = run_scaled_dot_product_attention(Q=q, K=k, V=v, mask=mask)
+    numpy_snapshot.assert_match(
+        actual_output,
+        atol=1e-5,
     )
 
-    input_ids = torch.randint(0, vocab_size, (batch_size, seq_len))
-    logits = model(input_ids)
 
-    assert logits.shape == (batch_size, seq_len, vocab_size)
-    assert model.lm_head.weight is model.token_embeddings.weight
+def test_4d_scaled_dot_product_attention(numpy_snapshot, q, k, v, mask):
+    # Shape: (batch_size, num_heads, seq_len, d_k)
+    q, k, v = (rearrange(x, "(batch head) seq d -> batch head seq d", head=2) for x in (q, k, v))
+    mask = rearrange(mask, "(batch head) query key -> batch head query key", head=2)
+
+    actual_output = run_scaled_dot_product_attention(Q=q, K=k, V=v, mask=mask)
+    numpy_snapshot.assert_match(
+        actual_output,
+        atol=1e-5,
+    )
+
+
+def test_multihead_self_attention(numpy_snapshot, in_embeddings, d_model, n_heads, ts_state_dict):
+    d, _ = ts_state_dict
+    q_proj_weight, k_proj_weight, v_proj_weight, o_proj_weight = [
+        d[f"layers.0.attn.{k}_proj.weight"] for k in ["q", "k", "v", "output"]
+    ]
+    actual_output = run_multihead_self_attention(
+        d_model=d_model,
+        num_heads=n_heads,
+        q_proj_weight=q_proj_weight,
+        k_proj_weight=k_proj_weight,
+        v_proj_weight=v_proj_weight,
+        o_proj_weight=o_proj_weight,
+        in_features=in_embeddings,
+    )
+    numpy_snapshot.assert_match(actual_output, atol=1e-5)
+
+
+def test_multihead_self_attention_with_rope(
+    numpy_snapshot, in_embeddings, d_model, n_heads, ts_state_dict, n_keys, theta, pos_ids
+):
+    d, _ = ts_state_dict
+    q_proj_weight, k_proj_weight, v_proj_weight, o_proj_weight = [
+        d[f"layers.0.attn.{k}_proj.weight"] for k in ["q", "k", "v", "output"]
+    ]
+    pos_ids = rearrange(pos_ids, "seq -> 1 seq")
+    actual_output = run_multihead_self_attention_with_rope(
+        d_model=d_model,
+        num_heads=n_heads,
+        max_seq_len=n_keys,
+        theta=theta,
+        q_proj_weight=q_proj_weight,
+        k_proj_weight=k_proj_weight,
+        v_proj_weight=v_proj_weight,
+        o_proj_weight=o_proj_weight,
+        in_features=in_embeddings,
+        token_positions=pos_ids,
+    )
+    numpy_snapshot.assert_match(actual_output, atol=1e-5)
+
+
+def test_transformer_lm(
+    numpy_snapshot, vocab_size, n_keys, d_model, n_layers, n_heads, d_ff, theta, ts_state_dict, in_indices
+):
+    state_dict, _ = ts_state_dict
+
+    actual_output = run_transformer_lm(
+        vocab_size=vocab_size,
+        context_length=n_keys,
+        d_model=d_model,
+        num_layers=n_layers,
+        num_heads=n_heads,
+        d_ff=d_ff,
+        rope_theta=theta,
+        weights=state_dict,
+        in_indices=in_indices,
+    )
+    numpy_snapshot.assert_match(actual_output, atol=1e-4, rtol=1e-2)
+
+
+def test_transformer_lm_truncated_input(
+    numpy_snapshot, vocab_size, n_keys, d_model, n_layers, n_heads, d_ff, theta, ts_state_dict, in_indices
+):
+    in_indices_truncated = in_indices[..., : in_indices.shape[-1] // 2]
+    truncated_actual_output = run_transformer_lm(
+        vocab_size=vocab_size,
+        context_length=n_keys,
+        d_model=d_model,
+        num_layers=n_layers,
+        num_heads=n_heads,
+        d_ff=d_ff,
+        rope_theta=theta,
+        weights=ts_state_dict[0],
+        in_indices=in_indices_truncated,
+    )
+
+    numpy_snapshot.assert_match(
+        truncated_actual_output,
+        atol=1e-4,
+    )
+
+
+def test_transformer_block(numpy_snapshot, ts_state_dict, in_embeddings, d_model, n_heads, d_ff, n_keys, theta):
+    block_weights = {k.replace("layers.0.", ""): v for k, v in ts_state_dict[0].items() if "layers.0." in k}
+
+    actual_output = run_transformer_block(
+        d_model=d_model,
+        num_heads=n_heads,
+        d_ff=d_ff,
+        max_seq_len=n_keys,
+        theta=theta,
+        weights=block_weights,
+        in_features=in_embeddings,
+    )
+    numpy_snapshot.assert_match(
+        actual_output,
+        atol=1e-4,
+    )
+
+
+def test_rmsnorm(numpy_snapshot, ts_state_dict, in_embeddings):
+    state_dict, _ = ts_state_dict
+    reference_weights = state_dict["layers.1.ln1.weight"]
+    d_model = reference_weights.shape[0]
+
+    actual_output = run_rmsnorm(d_model=d_model, eps=1e-5, weights=reference_weights, in_features=in_embeddings)
+
+    numpy_snapshot.assert_match(actual_output, atol=1e-4)
+
+
+def test_rope(numpy_snapshot, in_embeddings, d_model, theta, n_queries, pos_ids):
+    output = run_rope(
+        d_model, theta=theta, max_seq_len=n_queries, in_query_or_key=in_embeddings, token_positions=pos_ids
+    )
+    numpy_snapshot.assert_match(output, atol=1e-5)
+
+
+def test_silu_matches_pytorch():
+    x = torch.tensor(
+        [
+            [0.2352, 0.9259, 0.5189, 0.4725, 0.9730],
+            [0.7581, 0.9692, 0.2129, 0.9345, 0.0149],
+        ]
+    )
+    expected_output = F.silu(x)
+    actual_output = run_silu(x)
+    numpy.testing.assert_allclose(actual_output.detach().numpy(), expected_output.detach().numpy(), atol=1e-5)

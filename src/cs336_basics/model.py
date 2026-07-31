@@ -63,7 +63,7 @@ class SwiGLU(nn.Module):
 
 class RotaryPositionalEmbedding(nn.Module):
     """
-    Rotary Positional Embedding (RoPE).
+    Rotary Positional Embedding (RoPE) using adjacent pair rotation.
     """
 
     def __init__(self, d_key: int, max_seq_len: int = 2048, theta: float = 10000.0):
@@ -75,38 +75,53 @@ class RotaryPositionalEmbedding(nn.Module):
         self.max_seq_len = max_seq_len
         self.theta = theta
 
-        # Calculate inverse frequencies: theta_i = theta^(-2(i-1)/d_key)
+        # theta_i = theta^(-2i / d_key)
         inv_freq = 1.0 / (self.theta ** (torch.arange(0, d_key, 2).float() / d_key))
         self.register_buffer("inv_freq", inv_freq, persistent=False)
 
-        # Precompute cos and sin tables
-        t = torch.arange(max_seq_len).float()
-        freqs = torch.einsum("i,j->ij", t, inv_freq)  # (max_seq_len, d_key // 2)
-        
-        # Duplicate for pairs: [f0, f1, ...] -> [f0, f0, f1, f1, ...]
-        emb = torch.cat((freqs, freqs), dim=-1)  # (max_seq_len, d_key)
-        self.register_buffer("cos_cached", emb.cos(), persistent=False)
-        self.register_buffer("sin_cached", emb.sin(), persistent=False)
-
-    def _rotate_half(self, x: torch.Tensor) -> torch.Tensor:
+    def _rotate_adjacent(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Rotates half the hidden dims of input x: [-x2, x1] for consecutive pairs.
+        Rotates adjacent pairs of input x: [x0, x1] -> [-x1, x0].
         """
-        x1 = x[..., : self.d_key // 2]
-        x2 = x[..., self.d_key // 2 :]
-        return torch.cat((-x2, x1), dim=-1)
+        x_even = x[..., 0::2]
+        x_odd = x[..., 1::2]
+        return torch.stack((-x_odd, x_even), dim=-1).flatten(-2)
 
-    def forward(self, x: torch.Tensor, seq_len: int) -> torch.Tensor:
+    def forward(
+        self,
+        x: torch.Tensor,
+        token_positions: torch.Tensor | int | None = None,
+    ) -> torch.Tensor:
         """
         Args:
-            x: Tensor of shape (batch, num_heads, seq_len, d_key)
-            seq_len: Current sequence length.
+            x: Input tensor of shape (..., seq_len, d_key)
+            token_positions: Optional position IDs tensor of shape (..., seq_len) or seq_len int
         Returns:
             RoPE-transformed tensor of same shape.
         """
-        cos = self.cos_cached[:seq_len, :].unsqueeze(0).unsqueeze(0)  # (1, 1, seq_len, d_key)
-        sin = self.sin_cached[:seq_len, :].unsqueeze(0).unsqueeze(0)  # (1, 1, seq_len, d_key)
-        return (x * cos) + (self._rotate_half(x) * sin)
+        seq_len = x.size(-2)
+        if token_positions is None or isinstance(token_positions, int):
+            t = torch.arange(seq_len, device=x.device, dtype=torch.float32)
+            freqs = torch.einsum("i,j->ij", t, self.inv_freq)
+        else:
+            freqs = torch.einsum("...i,j->...ij", token_positions.float(), self.inv_freq)
+
+        cos = torch.repeat_interleave(freqs.cos(), 2, dim=-1)
+        sin = torch.repeat_interleave(freqs.sin(), 2, dim=-1)
+
+
+        # Match dimensions with x if x has extra leading/middle dims (e.g. heads)
+        while cos.ndim < x.ndim:
+            if cos.ndim == x.ndim - 1:
+                # Insert head dimension if x is (batch, num_heads, seq_len, d_key)
+                cos = cos.unsqueeze(-3)
+                sin = sin.unsqueeze(-3)
+            else:
+                cos = cos.unsqueeze(0)
+                sin = sin.unsqueeze(0)
+
+        return (x * cos) + (self._rotate_adjacent(x) * sin)
+
 
 
 class CausalSelfAttention(nn.Module):
@@ -156,8 +171,9 @@ class CausalSelfAttention(nn.Module):
 
         # Apply RoPE if present
         if self.rope is not None:
-            q = self.rope(q, seq_len)
-            k = self.rope(k, seq_len)
+            q = self.rope(q)
+            k = self.rope(k)
+
 
         # Scaled dot-product attention
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)

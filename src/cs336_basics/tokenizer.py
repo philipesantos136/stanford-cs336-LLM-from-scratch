@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from typing import Dict, List, Set, Tuple, Union
+from typing import Dict, Iterable, List, Set, Tuple, Union
 
 import regex
 
@@ -30,11 +30,6 @@ class BPETokenizer:
     ):
         """
         Initialize BPE Tokenizer with vocabulary mapping, merge rules, and special tokens.
-
-        Args:
-            vocab: Mapping from token_id -> byte sequence (bytes).
-            merges: Ordered list of byte pairs merged during training.
-            special_tokens: Mapping from special token string -> token_id.
         """
         self.vocab = dict(vocab)
         self.bytes_to_id: Dict[bytes, int] = {b: i for i, b in self.vocab.items()}
@@ -50,7 +45,6 @@ class BPETokenizer:
             idx: token for token, idx in self.special_tokens.items()
         }
 
-        # Regex compiled for pre-tokenization split
         self.pat = regex.compile(GPT2_SPLIT_REGEX)
 
     @classmethod
@@ -61,101 +55,123 @@ class BPETokenizer:
         special_tokens: List[str] | None = None,
     ) -> BPETokenizer:
         """
-        Train BPE Tokenizer on raw text.
-
-        Args:
-            text: Input corpus text.
-            vocab_size: Target total vocabulary size (including byte tokens & merges, excluding special tokens).
-            special_tokens: List of special token strings to add to tokenizer.
-
-        Returns:
-            Trained BPETokenizer instance.
+        Train BPE Tokenizer on raw text with fast incremental pair counting.
         """
         if vocab_size < 256:
             raise ValueError("vocab_size must be at least 256 to cover all byte values.")
 
-        # Base vocabulary: 256 byte tokens (0..255)
         vocab: Dict[int, bytes] = {i: bytes([i]) for i in range(256)}
         
-        # Pre-tokenize corpus using GPT-2 regex
-        words = regex.findall(GPT2_SPLIT_REGEX, text)
+        if special_tokens:
+            special_pattern = "|".join(re.escape(st) for st in special_tokens)
+            text_chunks = re.split(special_pattern, text)
+        else:
+            text_chunks = [text]
 
-        # Count frequencies of word byte-sequences
-        word_counts: Dict[Tuple[bytes, ...], int] = {}
+        words = []
+        for chunk in text_chunks:
+            words.extend(regex.findall(GPT2_SPLIT_REGEX, chunk))
+
+        # Count word frequencies
+        raw_counts: Dict[Tuple[bytes, ...], int] = {}
         for word in words:
             byte_tuple = tuple(bytes([b]) for b in word.encode("utf-8"))
-            word_counts[byte_tuple] = word_counts.get(byte_tuple, 0) + 1
+            raw_counts[byte_tuple] = raw_counts.get(byte_tuple, 0) + 1
 
+        # Initial pair counts and inverted index (pair -> set of words containing pair)
+        pair_counts: Dict[Tuple[bytes, bytes], int] = {}
+        where_pair: Dict[Tuple[bytes, bytes], Set[Tuple[bytes, ...]]] = {}
+
+        for word, freq in raw_counts.items():
+            for i in range(len(word) - 1):
+                pair = (word[i], word[i + 1])
+                pair_counts[pair] = pair_counts.get(pair, 0) + freq
+                if pair not in where_pair:
+                    where_pair[pair] = set()
+                where_pair[pair].add(word)
+
+        word_counts = dict(raw_counts)
         merges: List[Tuple[bytes, bytes]] = []
 
-        num_merges = vocab_size - 256
-        for step in range(num_merges):
-            # Count pair frequencies across all words
-            pair_counts: Dict[Tuple[bytes, bytes], int] = {}
-            for word, freq in word_counts.items():
-                for i in range(len(word) - 1):
-                    pair = (word[i], word[i + 1])
-                    pair_counts[pair] = pair_counts.get(pair, 0) + freq
-
+        num_specials = len(special_tokens) if special_tokens else 0
+        num_merges = vocab_size - 256 - num_specials
+        for _ in range(num_merges):
             if not pair_counts:
                 break
 
-            # Find pair with max frequency (break ties by lexicographical order for determinism)
+            # Find pair with max frequency (break ties lexicographically for reference BPE)
             best_pair = max(pair_counts.keys(), key=lambda p: (pair_counts[p], p))
             if pair_counts[best_pair] == 0:
                 break
 
-            # Merge best_pair in all words
             merged_token = best_pair[0] + best_pair[1]
             new_id = len(vocab)
             vocab[new_id] = merged_token
             merges.append(best_pair)
 
-            new_word_counts: Dict[Tuple[bytes, ...], int] = {}
-            for word, freq in word_counts.items():
-                new_word: List[bytes] = []
+            # Get affected words
+            affected_words = list(where_pair.get(best_pair, set()))
+
+            for old_word in affected_words:
+                freq = word_counts.pop(old_word)
+
+                # Remove old pairs of this word
+                for i in range(len(old_word) - 1):
+                    p = (old_word[i], old_word[i + 1])
+                    pair_counts[p] -= freq
+                    if pair_counts[p] == 0:
+                        del pair_counts[p]
+                    if p in where_pair and old_word in where_pair[p]:
+                        where_pair[p].remove(old_word)
+
+                # Merge best_pair in old_word
+                new_word_list: List[bytes] = []
                 i = 0
-                while i < len(word):
-                    if i < len(word) - 1 and (word[i], word[i + 1]) == best_pair:
-                        new_word.append(merged_token)
+                while i < len(old_word):
+                    if i < len(old_word) - 1 and (old_word[i], old_word[i + 1]) == best_pair:
+                        new_word_list.append(merged_token)
                         i += 2
                     else:
-                        new_word.append(word[i])
+                        new_word_list.append(old_word[i])
                         i += 1
-                new_word_counts[tuple(new_word)] = freq
-            word_counts = new_word_counts
+                new_word = tuple(new_word_list)
 
-        # Construct special tokens map starting at index after base vocab & merges
+                # Add new_word to word_counts
+                word_counts[new_word] = word_counts.get(new_word, 0) + freq
+
+                # Add new pairs of new_word
+                for i in range(len(new_word) - 1):
+                    p = (new_word[i], new_word[i + 1])
+                    pair_counts[p] = pair_counts.get(p, 0) + freq
+                    if p not in where_pair:
+                        where_pair[p] = set()
+                    where_pair[p].add(new_word)
+
+        # Construct special tokens map and insert into vocab
         special_token_map: Dict[str, int] = {}
         if special_tokens:
-            current_id = max(vocab.keys()) + 1
             for token in special_tokens:
-                special_token_map[token] = current_id
-                current_id += 1
+                token_bytes = token.encode("utf-8")
+                new_id = len(vocab)
+                vocab[new_id] = token_bytes
+                special_token_map[token] = new_id
 
         return cls(vocab=vocab, merges=merges, special_tokens=special_token_map)
 
+
     def _encode_chunk(self, chunk_bytes: bytes) -> List[int]:
-        """
-        Encode a single pre-tokenized byte chunk using learned BPE ranks.
-        """
         if not chunk_bytes:
             return []
 
-        # Represent as list of individual byte objects
         parts: List[bytes] = [bytes([b]) for b in chunk_bytes]
 
         while len(parts) >= 2:
-            # Find candidate pairs and their rank
             pairs = [(parts[i], parts[i + 1]) for i in range(len(parts) - 1)]
-            
-            # Find pair with lowest merge rank (highest priority)
             best_pair = min(pairs, key=lambda p: self.bpe_ranks.get(p, float("inf")))
             
             if best_pair not in self.bpe_ranks:
                 break
 
-            # Merge all occurrences of best_pair in parts
             merged_token = best_pair[0] + best_pair[1]
             new_parts: List[bytes] = []
             i = 0
@@ -173,36 +189,24 @@ class BPETokenizer:
     def encode(
         self,
         text: str,
-        allowed_special: Union[Set[str], str] = "none",
+        allowed_special: Union[Set[str], str] = "all",
     ) -> List[int]:
-        """
-        Encode text into token IDs.
-
-        Args:
-            text: Input string.
-            allowed_special: Set of special token strings permitted in text, or "all"/"none".
-
-        Returns:
-            List of integer token IDs.
-        """
         if allowed_special == "all":
             special_set = set(self.special_tokens.keys())
-        elif allowed_special == "none" or allowed_special is None:
+        elif allowed_special == "none":
             special_set = set()
         elif isinstance(allowed_special, set):
             special_set = allowed_special
         else:
-            raise ValueError(f"Invalid allowed_special value: {allowed_special}")
+            special_set = set(self.special_tokens.keys())
 
         if not special_set:
-            # Pre-tokenize and encode normal text
             ids: List[int] = []
             for chunk in self.pat.findall(text):
                 chunk_bytes = chunk.encode("utf-8")
                 ids.extend(self._encode_chunk(chunk_bytes))
             return ids
 
-        # Split text on special tokens
         special_pattern = "|".join(re.escape(tok) for tok in sorted(special_set, key=len, reverse=True))
         special_regex = re.compile(f"({special_pattern})")
 
@@ -217,16 +221,16 @@ class BPETokenizer:
                     ids.extend(self._encode_chunk(chunk_bytes))
         return ids
 
+    def encode_iterable(
+        self,
+        iterable: Iterable[str],
+        allowed_special: Union[Set[str], str] = "all",
+    ):
+        for line in iterable:
+            for token_id in self.encode(line, allowed_special=allowed_special):
+                yield token_id
+
     def decode(self, ids: List[int]) -> str:
-        """
-        Decode list of token IDs back into string.
-
-        Args:
-            ids: List of integer token IDs.
-
-        Returns:
-            Decoded string.
-        """
         byte_pieces: List[bytes] = []
         for idx in ids:
             if idx in self.vocab:
@@ -244,17 +248,12 @@ class BPETokenizer:
         vocab_filename: str | os.PathLike,
         merges_filename: str | os.PathLike,
     ) -> None:
-        """
-        Save vocabulary and merge rules to JSON/text files.
-        """
-        # Save vocabulary: ID -> hex string or latin1 string representation
         vocab_data = {
             str(idx): token.hex() for idx, token in self.vocab.items()
         }
         with open(vocab_filename, "w", encoding="utf-8") as f:
             json.dump(vocab_data, f, indent=2)
 
-        # Save merges: pair of hex strings
         merges_data = [
             (p1.hex(), p2.hex()) for p1, p2 in self.merges
         ]
@@ -271,9 +270,6 @@ class BPETokenizer:
         merges_filename: str | os.PathLike,
         special_tokens: Dict[str, int] | None = None,
     ) -> BPETokenizer:
-        """
-        Load BPETokenizer from vocabulary and merge files.
-        """
         with open(vocab_filename, "r", encoding="utf-8") as f:
             vocab_data = json.load(f)
 
