@@ -71,13 +71,13 @@ Suponha que temos o seguinte conjunto de dados extraído dos experimentos IsoFLO
 
 ### Orçamentos e Pontos Ótimos Observados:
 - **Orçamento $C_1 = 6.0 \times 10^{18}$ FLOPs:**
-  - $N^* = 7.62 \times 10^8$ parâmetros ($762$M).
-  - $D^* = \frac{6.0 \times 10^{18}}{6 \times 7.62 \times 10^8} = 1.31 \times 10^9$ tokens ($1.31$B tokens).
+  - $N^* = 7.62 \times 10^8$ parâmetros (762M de parâmetros).
+  - $D^* = \frac{6.0 \times 10^{18}}{6 \times 7.62 \times 10^8} = 1.31 \times 10^9$ tokens (1.31B de tokens).
   - Perda Mínima: $5.8999$.
 
 - **Orçamento $C_2 = 6.0 \times 10^{20}$ FLOPs ($100\times$ maior compute):**
-  - $N^* = 6.97 \times 10^9$ parâmetros ($6.97$B).
-  - $D^* = 1.43 \times 10^{10}$ tokens ($14.3$B tokens).
+  - $N^* = 6.97 \times 10^9$ parâmetros (6.97B de parâmetros).
+  - $D^* = 1.43 \times 10^{10}$ tokens (14.3B de tokens).
   - Perda Mínima: $4.1212$.
 
 ### Ajuste de Power-Law:
@@ -88,8 +88,8 @@ $$D^*(C) = 0.14326 \cdot C^{0.5313}$$
 Observe que $0.4687 + 0.5313 = 1.0000$, validando a conservação de FLOPs!
 
 ### Extrapolação para $C = 1.0 \times 10^{22}$ FLOPs:
-1. $N^*(10^{22}) = 1.1634 \cdot (10^{22})^{0.4687} \approx 2.38 \times 10^{10}$ parâmetros (**$23.8$ bilhões**).
-2. $D^*(10^{22}) = 0.14326 \cdot (10^{22})^{0.5313} \approx 7.00 \times 10^{10}$ tokens (**$70.0$ bilhões**).
+1. $N^*(10^{22}) = 1.1634 \cdot (10^{22})^{0.4687} \approx 2.38 \times 10^{10}$ parâmetros (**23.8 bilhões de parâmetros**).
+2. $D^*(10^{22}) = 0.14326 \cdot (10^{22})^{0.5313} \approx 7.00 \times 10^{10}$ tokens (**70.0 bilhões de tokens**).
 3. Verificação de FLOPs: $6 \cdot (2.38 \times 10^{10}) \cdot (7.00 \times 10^{10}) = 1.00 \times 10^{22}$ FLOPs.
 
 ---
