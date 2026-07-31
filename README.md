@@ -1,31 +1,29 @@
 # Stanford CS336: Language Modeling from Scratch (`stanford-cs336-LLM-from-scratch`)
 
-Repositório voltado para a **compreensão aprofundada dos conceitos fundamentais** necessários para a **implementação completa do treinamento de LLMs (Large Language Models) no futuro**, baseado no curso Stanford CS336.
+A repository dedicated to an **in-depth understanding of fundamental concepts** required for a **full end-to-end implementation of LLM (Large Language Model) training in the future**, based on the Stanford CS336 course.
 
-## 🎯 Objetivo e Metodologia
+## 🎯 Goal & Methodology
 
-- **Propósito:** Consolidar uma base teórica e prática sólida para construir e treinar modelos de linguagem do zero.
-- **Abordagem (*Vibe Coding* + Explicações Detalhadas):** As tarefas são desenvolvidas utilizando técnicas de *vibe coding* (desenvolvimento assistido por IA), mas com **explicações conceituais detalhadas** para garantir a total compreensão, fundamentação e replicabilidade dos conceitos em diversos contextos.
+- **Purpose:** Build a solid theoretical and practical foundation to construct and train language models from scratch.
+- **Approach (*Vibe Coding* + Detailed Explanations):** Tasks are implemented using *vibe coding* techniques (AI-assisted development), accompanied by **detailed conceptual explanations** to ensure deep comprehension, sound reasoning, and replicability across various contexts.
 
-## 📁 Estrutura do Projeto
+## 📁 Project Structure
 
-- `src/`: Código fonte dos modelos, tokenizadores e pipelines de treinamento.
-- `tests/`: Scripts e suítes de testes unitários e de integração.
-- `docs/`: Documentação técnica e registros de decisões de arquitetura ([ADRs](file:///d:/Projetos/Stanford-CS336/docs/adr/)).
+- `src/`: Source code for models, tokenizers, and training pipelines.
+- `tests/`: Unit and integration test suites.
+- `docs/`: Technical documentation and Architecture Decision Records ([ADRs](file:///d:/Projetos/Stanford-CS336/docs/adr/)).
 
-## 🚀 Como Começar
+## 🚀 Getting Started
 
-1. Clone este repositório:
+1. Clone this repository:
    ```bash
    git clone https://github.com/philipesantos136/stanford-cs336-LLM-from-scratch.git
    ```
-2. Crie um ambiente virtual:
+2. Create a virtual environment:
    ```bash
    python -m venv .venv
    ```
-3. Ative o ambiente virtual (Windows):
+3. Activate the virtual environment (Windows):
    ```cmd
    .venv\Scripts\activate
    ```
-
-

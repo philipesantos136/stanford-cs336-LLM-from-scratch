@@ -1,25 +1,25 @@
-# ADR 0001: Inicialização do Repositório e Estrutura Base
+# ADR 0001: Repository Initialization and Base Structure
 
-* **Status:** Aceito
-* **Data:** 2026-07-31
+* **Status:** Accepted
+* **Date:** 2026-07-31
 
-## Contexto
+## Context
 
-Necessidade de estruturar o projeto `Stanford-CS336` para suportar o desenvolvimento de modelos de linguagem a partir do zero, seguindo boas práticas de desenvolvimento, testes automatizados e documentação técnica.
+Need to structure the `Stanford-CS336` project to support building language models from scratch, adhering to software engineering best practices, automated testing, and technical documentation.
 
-## Decisão
+## Decision
 
-1. **Estrutura de Pastas:**
-   - `src/`: Contém os módulos de código Python.
-   - `tests/`: Contém testes automatizados.
-   - `docs/`: Guarda documentações e ADRs (`docs/adr/`).
-   - `tmp/`: Diretório temporário (ignorado pelo Git via `.gitignore`).
+1. **Directory Structure:**
+   - `src/`: Contains core Python modules.
+   - `tests/`: Contains automated tests.
+   - `docs/`: Holds documentation and ADRs (`docs/adr/`).
+   - `tmp/`: Temporary directory (ignored by Git via `.gitignore`).
 
-2. **Gerenciamento de Controle de Versão:**
-   - Git como VCP primário com branch principal `main`.
-   - Inclusão de `.gitignore` abrangente para ambiente Python e arquivos temporários.
+2. **Version Control Management:**
+   - Git as primary VCS with main branch `main`.
+   - Inclusion of comprehensive `.gitignore` for Python environment and temporary files.
 
-## Consequências
+## Consequences
 
-- Facilidade no rastreamento de decisões de arquitetura e infraestrutura.
-- Garantia de isolamento de arquivos temporários e dependências locais.
+- Streamlined tracking of architecture and infrastructure decisions.
+- Ensured isolation of temporary files and local environment dependencies.
