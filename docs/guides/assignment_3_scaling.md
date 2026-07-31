@@ -10,49 +10,54 @@ Este guia fornece uma explicação teórica e prática sobre **Scaling Laws (Lei
 Treinar um modelo de linguagem de grande porte (LLM) custa milhões de dólares em tempo de GPU/TPU. Treinar um modelo de 70 bilhões de parâmetros sem saber de antemão a quantidade ideal de tokens de treinamento pode resultar em um modelo subtreinado ou em um gasto desnecessário de computação.
 
 As **Scaling Laws (Leis de Escala)** nos permitem:
-1. Executar experimentos pequenos e baratos (ex: entre \(10^{13}\) e \(10^{18}\) FLOPs).
-2. Derivar equações matemáticas empíricas (\(N_{\text{opt}} \propto C^a\) e \(D_{\text{opt}} \propto C^b\)).
-3. **Prever com precisão** a arquitetura exata (\(N^*\)) e o número de tokens (\(D^*\)) necessários para um orçamento massivo (ex: \(10^{20}\) a \(10^{24}\) FLOPs) **antes de gastar qualquer GPU de grande porte**.
+1. Executar experimentos pequenos e baratos (ex: entre 10¹³ e 10¹⁸ FLOPs).
+2. Derivar equações matemáticas empíricas (N_opt ∝ C^a e D_opt ∝ C^b).
+3. **Prever com precisão** a arquitetura exata (N*) e o número de tokens (D*) necessários para um orçamento massivo (ex: 10²⁰ a 10²⁴ FLOPs) **antes de gastar qualquer GPU de grande porte**.
 
 ### Qual Problema Resolve?
 Historicamente:
-- **Kaplan et al. (2020 - OpenAI):** Defendia que o tamanho do modelo (\(N\)) devia crescer muito mais rápido do que o dataset (\(D\)) conforme a computação aumentava (\(N \propto C^{0.73}\), \(D \propto C^{0.27}\)). Isso levou a modelos gigantescos porém "famintos por dados" (under-trained).
-- **Hoffmann et al. (2022 - Chinchilla / DeepMind):** Demonstrou empiricamente que parâmetros (\(N\)) e tokens (\(D\)) devem ser escalados em proporções **iguais** (\(N \propto C^{0.5}\), \(D \propto C^{0.5}\)).
+- **Kaplan et al. (2020 - OpenAI):** Defendia que o tamanho do modelo (N) devia crescer muito mais rápido do que o dataset (D) conforme a computação aumentava (N ∝ C^0.73, D ∝ C^0.27). Isso levou a modelos gigantescos porém "famintos por dados" (under-trained).
+- **Hoffmann et al. (2022 - Chinchilla / DeepMind):** Demonstrou empiricamente que parâmetros (N) e tokens (D) devem ser escalados em proporções **iguais** (N ∝ C^0.5, D ∝ C^0.5).
 
-O método **IsoFLOPs** resolve essa ambiguidade construindo curvas empíricas de perda para cada orçamento computacional fixo \(C\).
+O método **IsoFLOPs** resolve essa ambiguidade construindo curvas empíricas de perda para cada orçamento computacional fixo C.
 
 ---
 
 ## 2. Intuição Teórica e Matemática Simples
 
 ### Relação Fundamental de FLOPs no Transformer
-Em modelos autorregressivos decoder-only (como LLaMA e GPT), o número total de operações de ponto flutuante (FLOPs) para treinar um modelo de \(N\) parâmetros em \(D\) tokens é aproximadamente:
-\[C \approx 6 \cdot N \cdot D\]
+Em modelos autorregressivos decoder-only (como LLaMA e GPT), o número total de operações de ponto flutuante (FLOPs) para treinar um modelo de N parâmetros em D tokens é aproximadamente:
 
-- **Passe Direto (Forward Pass):** Exige \(2 \cdot N\) FLOPs por token.
-- **Passe Reverso (Backward Pass):** Exige \(4 \cdot N\) FLOPs por token.
-- **Total por Token:** \(2N + 4N = 6N\) FLOPs.
+**C ≈ 6 × N × D**
 
-Assim, se o orçamento computacional \(C\) for fixado, a quantidade de tokens \(D\) é determinada unicamente por \(N\):
-\[D = \frac{C}{6 \cdot N}\]
+- **Passe Direto (Forward Pass):** Exige 2 × N FLOPs por token.
+- **Passe Reverso (Backward Pass):** Exige 4 × N FLOPs por token.
+- **Total por Token:** 2N + 4N = 6N FLOPs.
+
+Assim, se o orçamento computacional C for fixado, a quantidade de tokens D é determinada unicamente por N:
+
+**D = C / (6 × N)**
 
 ### A Equação de Perda (Power-Law de Chinchilla)
-A perda final \(L(N, D)\) de um modelo treinado com \(N\) parâmetros e \(D\) tokens segue uma lei de potência separável:
-\[L(N, D) = E + \frac{A}{N^\alpha} + \frac{B}{D^\beta}\]
+A perda final L(N, D) de um modelo treinado com N parâmetros e D tokens segue uma lei de potência separável:
+
+**L(N, D) = E + (A / N^α) + (B / D^β)**
 
 onde:
-- \(E\): Perda irredutível (entropia inerente da linguagem natural).
-- \(A / N^\alpha\): Erro de capacidade do modelo.
-- \(B / D^\beta\): Erro de amostragem do dataset.
+- **E**: Perda irredutível (entropia inerente da linguagem natural).
+- **A / N^α**: Erro de capacidade do modelo.
+- **B / D^β**: Erro de amostragem do dataset.
 
 ### O Método IsoFLOPs
-Para um determinado orçamento fixo \(C_i\):
-1. Variamos \(N\) em uma grade de tamanhos de modelo.
-2. O número de tokens ajusta-se automaticamente \(D = C_i / (6N)\).
-3. Treinamos cada modelo e medimos a perda final \(L\).
-4. Encontramos o valor ótimo \(N^*(C_i)\) que minimiza a perda naquele orçamento.
+Para um determinado orçamento fixo C_i:
+1. Variamos N em uma grade de tamanhos de modelo.
+2. O número de tokens ajusta-se automaticamente: D = C_i / (6 × N).
+3. Treinamos cada modelo e medimos a perda final L.
+4. Encontramos o valor ótimo N*(C_i) que minimiza a perda naquele orçamento.
 5. Ajustamos uma regressão log-log para encontrar os expoentes ótimos:
-\[N^*(C) = a \cdot C^a, \quad D^*(C) = c \cdot C^b\]
+
+**N*(C) = a × C^a**
+**D*(C) = c × C^b**
 
 ```mermaid
 graph TD
@@ -70,27 +75,28 @@ graph TD
 Suponha que temos o seguinte conjunto de dados extraído dos experimentos IsoFLOPs:
 
 ### Orçamentos e Pontos Ótimos Observados:
-- **Orçamento \(C_1 = 6.0 \times 10^{18}\) FLOPs:**
-  - \(N^* = 7.62 \times 10^8\) parâmetros (762M de parâmetros).
-  - \(D^* = \frac{6.0 \times 10^{18}}{6 \times 7.62 \times 10^8} = 1.31 \times 10^9\) tokens (1.31B de tokens).
-  - Perda Mínima: \(5.8999\).
+- **Orçamento C_1 = 6.0 × 10¹⁸ FLOPs:**
+  - N* = 7.62 × 10⁸ parâmetros (762 milhões de parâmetros).
+  - D* = (6.0 × 10¹⁸) / (6 × 7.62 × 10⁸) = 1.31 × 10⁹ tokens (1.31 bilhão de tokens).
+  - Perda Mínima: 5.8999.
 
-- **Orçamento \(C_2 = 6.0 \times 10^{20}\) FLOPs (\(100\times\) maior compute):**
-  - \(N^* = 6.97 \times 10^9\) parâmetros (6.97B de parâmetros).
-  - \(D^* = 1.43 \times 10^{10}\) tokens (14.3B de tokens).
-  - Perda Mínima: \(4.1212\).
+- **Orçamento C_2 = 6.0 × 10²⁰ FLOPs (100× maior computação):**
+  - N* = 6.97 × 10⁹ parâmetros (6.97 bilhões de parâmetros).
+  - D* = 1.43 × 10¹⁰ tokens (14.3 bilhões de tokens).
+  - Perda Mínima: 4.1212.
 
 ### Ajuste de Power-Law:
-Ao aplicar a regressão linear nos valores logarítmicos \(\ln(N^*)\) vs \(\ln(C)\), obtemos a seguinte equação:
-\[N^*(C) = 1.1634 \cdot C^{0.4687}\]
-\[D^*(C) = 0.14326 \cdot C^{0.5313}\]
+Ao aplicar a regressão linear nos valores logarítmicos log(N*) vs log(C), obtemos a seguinte equação:
 
-Observe que \(0.4687 + 0.5313 = 1.0000\), validando a conservação de FLOPs!
+- **N*(C) = 1.1634 × C^0.4687**
+- **D*(C) = 0.14326 × C^0.5313**
 
-### Extrapolação para \(C = 1.0 \times 10^{22}\) FLOPs:
-1. \(N^*(10^{22}) = 1.1634 \cdot (10^{22})^{0.4687} \approx 2.38 \times 10^{10}\) parâmetros (**23.8 bilhões de parâmetros**).
-2. \(D^*(10^{22}) = 0.14326 \cdot (10^{22})^{0.5313} \approx 7.00 \times 10^{10}\) tokens (**70.0 bilhões de tokens**).
-3. Verificação de FLOPs: \(6 \cdot (2.38 \times 10^{10}) \cdot (7.00 \times 10^{10}) = 1.00 \times 10^{22}\) FLOPs.
+Observe que 0.4687 + 0.5313 = 1.0000, validando a conservação de FLOPs!
+
+### Extrapolação para C = 1.0 × 10²² FLOPs:
+1. **N*(10²²) = 1.1634 × (10²²)^0.4687 ≈ 2.38 × 10¹⁰ parâmetros** (23.8 bilhões de parâmetros).
+2. **D*(10²²) = 0.14326 × (10²²)^0.5313 ≈ 7.00 × 10¹⁰ tokens** (70.0 bilhões de tokens).
+3. Verificação de FLOPs: 6 × (2.38 × 10¹⁰) × (7.00 × 10¹⁰) = 1.00 × 10²² FLOPs.
 
 ---
 
