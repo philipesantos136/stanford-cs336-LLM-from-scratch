@@ -32,3 +32,10 @@
    - Para cada assignment trabalhado neste projeto, deve-se consultar o repositório correspondente no GitHub do Stanford CS336.
    - Caso o repositório do assignment não seja encontrado automaticamente, solicitar expressamente ao usuário que forneça a URL ou o conteúdo do repositório.
    - Analisar detalhadamente o repositório de referência para determinar requisitos, estruturas de pastas, dados, testes e componentes que devem ser integrados ou implementados no nosso código.
+
+## Estratégia de Branches por Assignment
+
+1. **Branch Dedicada para Cada Assignment:**
+   - Cada assignment do curso deve ser desenvolvido em uma nova branch dedicada (ex: `assignment-1`, `assignment-2`, etc.).
+   - Antes de iniciar a implementação de qualquer tarefa de um assignment, deve-se criar e alternar para a branch correspondente.
+   - Todos os commits atômicos e o `git push` devem ser efetuados na branch do assignment ativo para manter o versionamento isolado e organizado.
