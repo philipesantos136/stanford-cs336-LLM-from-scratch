@@ -39,3 +39,13 @@
    - Cada assignment do curso deve ser desenvolvido em uma nova branch dedicada (ex: `assignment-1`, `assignment-2`, etc.).
    - Antes de iniciar a implementação de qualquer tarefa de um assignment, deve-se criar e alternar para a branch correspondente.
    - Todos os commits atômicos e o `git push` devem ser efetuados na branch do assignment ativo para manter o versionamento isolado e organizado.
+
+## Documentação Obrigatória ao Concluir um Assignment
+
+1. **Elaboração de Documento Explicativo e Didático:**
+   - Ao concluir cada assignment, é obrigatório criar ou atualizar uma documentação dedicada no projeto detalhando as regras de negócio e a implementação técnica.
+   - A documentação deve ser estruturada contendo:
+     - **Explicação dos Conceitos:** Explicações claras e simplificadas de conceitos teóricos complexos envolvidos (ex: mecanismos de atenção, tokenização, perda, otimização, etc.).
+     - **Resumo da Implementação:** Descrição detalhada do que foi desenvolvido e testado.
+     - **Exemplos de Código:** Trechos de código comentados com explicações passo a passo.
+     - **Recursos Visuais e Exemplos Reais:** Aplicação prática, gráficos, diagramas e imagens explicativas sempre que relevante para enriquecer e facilitar a compreensão.
