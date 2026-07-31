@@ -21,13 +21,13 @@ O **Byte-Pair Encoding (BPE)** é o algoritmo de tokenização utilizado pelos m
 
 ```mermaid
 flowchart TD
-    A[Texto Bruto UTF-8] --> B[Pré-tokenização via Regex GPT-2]
-    B --> C[Sequência de Bytes por Palavra]
-    C --> D[Contagem de Pares Adjacentes Frequentes]
-    D --> E[Fusão do Par Mais Frequente em Novo Token]
-    E --> F{Alcançou vocab_size?}
+    A["Texto Bruto UTF-8"] --> B["Pré-tokenização<br/>(Regex GPT-2)"]
+    B --> C["Sequência de Bytes<br/>por Palavra"]
+    C --> D["Contagem de Pares<br/>Adjacentes"]
+    D --> E["Fusão do Par<br/>Mais Frequente"]
+    E --> F{"Alcançou<br/>vocab_size?"}
     F -- Não --> D
-    F -- Sim --> G[Vocabulário & Regras de Merge Finais]
+    F -- Sim --> G["Vocabulário e Regras<br/>de Merge Finais"]
 ```
 
 ---
@@ -76,15 +76,15 @@ $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{Q K^T}{\sqrt{d_k}} + M\r
 
 ```mermaid
 graph TD
-    X[Entrada x: batch, seq_len, d_model] --> Q_proj[Projeção Q]
-    X --> K_proj[Projeção K]
-    X --> V_proj[Projeção V]
-    Q_proj --> RoPE_Q[Aplicar RoPE em Q]
-    K_proj --> RoPE_K[Aplicar RoPE em K]
-    RoPE_Q --> SDPA[Dot-Product Scaled Attention + Máscara Causal Triangular]
+    X["Entrada x<br/>(batch, seq_len, d_model)"] --> Q_proj["Projeção Q"]
+    X --> K_proj["Projeção K"]
+    X --> V_proj["Projeção V"]
+    Q_proj --> RoPE_Q["Aplicar RoPE em Q"]
+    K_proj --> RoPE_K["Aplicar RoPE em K"]
+    RoPE_Q --> SDPA["Attention Mascarada<br/>+ Causal SDPA"]
     RoPE_K --> SDPA
     V_proj --> SDPA
-    SDPA --> Out_proj[Projeção de Saída W_o]
+    SDPA --> Out_proj["Projeção de Saída W_o"]
 ```
 
 ---
