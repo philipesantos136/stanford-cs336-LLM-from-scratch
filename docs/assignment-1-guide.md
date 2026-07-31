@@ -16,7 +16,8 @@ O **Byte-Pair Encoding (BPE)** é o algoritmo de tokenização utilizado pelos m
   ```
 
   Isso garante que fusões de tokens nunca ultrapassem limites morfológicos importantes (por exemplo, um espaço no início de uma palavra não é mesclado com a palavra anterior).
-- **Algoritmo de Fusão:** Iterativamente, contam-se os pares adjacentes de bytes mais frequentes no corpus e os fusora criando um novo token até atingir o tamanho de vocabulário desejado $V$.
+- **Algoritmo de Fusão:** Em cada etapa iterativa, identifica-se o par de bytes adjacentes mais frequente no corpus e mescla-se esse par para formar um novo token, repetindo o processo até que o vocabulário atinja o tamanho desejado $V$.
+
 
 ```mermaid
 flowchart TD
