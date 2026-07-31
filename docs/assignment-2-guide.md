@@ -138,3 +138,34 @@ graph TD
 | **RMSNorm** | Múltiplos kernels PyTorch nativos (bound por HBM) | Fused Kernel Triton (único acesso SRAM) | Redução de ~3x na latência de normalização |
 | **Data Parallel** | Treinamento Single-GPU | DDP com `all_reduce` assíncrono | Escalabilidade de throughput multi-GPU |
 | **Otimização AdamW** | Estados duplicados em todas as GPUs (16B/param) | ZeRO-1 (Sharded Optimizer) | Redução de $W\times$ no consumo de VRAM de otimizador |
+
+---
+
+## 🚀 5. Aplicação Futura: Como Usaremos Esses Conceitos nos Próximos Assignments e na Engenharia de LLMs
+
+Os componentes de alto desempenho desenvolvidos no **Assignment 2: Systems** formam a infraestrutura essencial de aceleração e escalabilidade de hardware que sustentam o treinamento e a inferência de LLMs em larga escala.
+
+### 🗺️ Mapeamento de Reuso e Evolução Arquitetural
+
+```mermaid
+graph LR
+    A["Assignment 2: Systems<br/>• Triton Fused RMSNorm<br/>• DDP & All-Reduce<br/>• ZeRO-1 Sharded Opt"] --> B["Assignment 3 / Otimizações<br/>• FlashAttention Triton<br/>• Tensor Parallelism<br/>• ZeRO-2 / ZeRO-3 FSDP"]
+    A --> C["Engenharia de Produção<br/>• vLLM & SGLang<br/>• Treinamento Massivo Multi-Node<br/>• Profiling & Tuning"]
+```
+
+#### 1. Fused Kernels em Triton (`RMSNorm` → `FlashAttention` & Fusões Customizadas)
+- **Nos Próximos Assignments:** A capacidade de implementar kernels Triton de baixa latência abre caminho para implementar variações do **FlashAttention** (Dao et al.), fusões de ativação (`Fused SwiGLU`, `Fused Bias Add`) e kernels de quantização (`FP8`, `INT4`).
+- **Na Engenharia de LLMs em Produção:** Kernels fundidos customizados são o pilar de sistemas como vLLM, TensorRT-LLM e SGLang, onde a minimização de tráfego na HBM permite servir milhares de requisições concorrentes com latência mínima de primeiro token (TTFT).
+
+#### 2. Distributed Data Parallel (`DDP`) & Gradient Bucketing
+- **Nos Próximos Assignments:** O mecanismo de comunicação assíncrona com `all_reduce` e empacotamento de gradientes (*bucketing*) será integrado com **Tensor Parallelism (TP)** e **Pipeline Parallelism (PP)** (Megatron-LM), forming o paralelismo 3D completo.
+- **Na Engenharia de LLMs em Produção:** O DDP é a base usada em clusters de milhares de GPUs H100/A100 interconectadas por InfiniBand/NVLink para distribuir o lote global de dados durante o pré-treinamento de modelos foundation (LLaMA, GPT-4, Claude).
+
+#### 3. Optimizer State Sharding (`ZeRO-1` → `ZeRO-2` & `ZeRO-3 / FSDP`)
+- **Nos Próximos Assignments:** O particionamento dos estados de otimizador (ZeRO-1) evolui diretamente para ZeRO-2 (sharding de gradientes) e ZeRO-3 / FSDP (sharding total de parâmetros, gradientes e estados de otimizador).
+- **Na Engenharia de LLMs em Produção:** Sem o sharding de otimizador, a memória ocupada pelos momentos $m$ e variâncias $v$ inviabilizaria o treinamento de modelos de centenas de bilhões de parâmetros em GPUs comerciais.
+
+#### 4. Benchmarking & Profiling Harness
+- **Nos Próximos Assignments:** O utilitário de benchmarking e rastreamento via `torch.profiler` servirá para auditar a sobreposição de computação e comunicação (*compute vs. communication overlap*), identificando gargalos em operações distribuídas.
+- **Na Engenharia de LLMs em Produção:** O profiling contínuo orienta escolhas de tamanho de micro-batch, alocação de memória e otimização de custos em infraestruturas de nuvem.
+
